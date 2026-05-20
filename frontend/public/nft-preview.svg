@@ -1,0 +1,45 @@
+<svg width="400" height="600" viewBox="0 0 400 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Gradient -->
+  <rect width="400" height="600" rx="24" fill="#0F172A"/>
+  <rect width="400" height="600" rx="24" fill="url(#paint0_radial_1_2)" fill-opacity="0.5"/>
+  
+  <!-- Glossy Overlay -->
+  <rect x="20" y="20" width="360" height="560" rx="20" fill="white" fill-opacity="0.03"/>
+  <rect x="20" y="20" width="360" height="560" rx="20" stroke="white" stroke-opacity="0.1" stroke-width="1"/>
+  
+  <!-- Logo Section -->
+  <rect x="40" y="50" width="40" height="40" rx="10" fill="#2563EB"/>
+  <text x="52" y="78" fill="white" font-family="Arial" font-size="24" font-weight="bold">G</text>
+  <text x="90" y="77" fill="white" font-family="Arial" font-size="18" font-weight="bold">GaslessAI</text>
+  
+  <!-- Tier Badge -->
+  <rect x="280" y="55" width="80" height="28" rx="14" fill="#2563EB" fill-opacity="0.2"/>
+  <text x="295" y="73" fill="#60A5FA" font-family="Arial" font-size="12" font-weight="bold">PREMIUM</text>
+  
+  <!-- Central Shield Icon -->
+  <circle cx="200" cy="280" r="100" fill="#2563EB" fill-opacity="0.1"/>
+  <path d="M200 180L270 210V280C270 330 240 370 200 390C160 370 130 330 130 280V210L200 180Z" fill="#2563EB" fill-opacity="0.2" stroke="#3B82F6" stroke-width="4"/>
+  <path d="M175 285L192 302L225 269" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Metadata Info -->
+  <text x="40" y="460" fill="white" font-family="Arial" font-size="24" font-weight="bold">Membership NFT</text>
+  <text x="40" y="485" fill="#94A3B8" font-family="Arial" font-size="14">ID: #0429-BASE-SEP</text>
+  
+  <rect x="40" y="510" width="320" height="1" fill="white" fill-opacity="0.1"/>
+  
+  <!-- Gas Savings Label -->
+  <text x="40" y="540" fill="#94A3B8" font-family="Arial" font-size="12">GAS SAVED VIA UGF</text>
+  <text x="40" y="565" fill="#10B981" font-family="Arial" font-size="20" font-weight="bold">0.842 ETH ($2,947)</text>
+  
+  <!-- Network Badge -->
+  <rect x="260" y="545" width="100" height="24" rx="6" fill="#1E293B"/>
+  <circle cx="272" cy="557" r="4" fill="#3B82F6"/>
+  <text x="282" y="561" fill="#94A3B8" font-family="Arial" font-size="10" font-weight="bold">BASE SEPOLIA</text>
+  
+  <defs>
+    <radialGradient id="paint0_radial_1_2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(200 300) rotate(90) scale(300 200)">
+      <stop stop-color="#2563EB" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#0F172A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>
