@@ -1,0 +1,19 @@
+# render.yaml — Infrastructure-as-Code for Render
+services:
+  - type: web
+    name: gaslessai-backend
+    runtime: node
+    plan: free
+    rootDir: frontend
+    buildCommand: "npm install --legacy-peer-deps"
+    startCommand: "node server.js"
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_SITE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SITE_NAME
+        value: GaslessAI

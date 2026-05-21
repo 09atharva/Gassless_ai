@@ -153,7 +153,8 @@ export default function AIAssistantPage() {
       }
 
       // Call AI backend
-      const response = await fetch('/api/ai/chat', {
+      const API_BASE = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${API_BASE}/api/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

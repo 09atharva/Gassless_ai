@@ -8,8 +8,18 @@ dotenv.config({ path: '.env.local' });
 const app = express();
 const port = process.env.PORT || 3001;
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://melodious-pixie-891755.netlify.app',
+    /\.netlify\.app$/
+  ]
+}));
 app.use(express.json());
+
+// Health check for Render
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 app.post('/api/ai/chat', async (req, res) => {
   try {
