@@ -1,4 +1,4 @@
-import { parseEther, type Address } from 'viem';
+import type { Address } from 'viem';
 
 /**
  * UGF Mock SDK
@@ -28,7 +28,7 @@ export const UGF_SDK = {
    */
   async executeGaslessTransaction(
     request: UGFTransactionRequest,
-    mockUSDAddress: Address
+    _mockUSDAddress: Address
   ): Promise<UGFResponse> {
     console.log('UGF: Initiating gasless transaction...', request);
     
@@ -51,7 +51,7 @@ export const UGF_SDK = {
   /**
    * Estimates gas savings for a transaction
    */
-  async estimateSavings(request: UGFTransactionRequest): Promise<string> {
+  async estimateSavings(_request: UGFTransactionRequest): Promise<string> {
     return "0.0024 ETH";
   },
 

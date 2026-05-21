@@ -5,6 +5,9 @@ import './globals.css';
 import '@rainbow-me/rainbowkit/styles.css';
 import { Providers } from './components/Web3Providers';
 
+// Polyfills
+window.global = window;
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Providers>

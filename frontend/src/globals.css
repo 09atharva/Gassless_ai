@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,41 +8,140 @@
   :root {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
-
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-
     --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
-
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
-
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
-
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
-
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+    --radius: 0.75rem;
 
-    --radius: 0.5rem;
+    /* SGIP Design Tokens */
+    --neon-blue: 59, 130, 246;
+    --neon-cyan: 34, 211, 238;
+    --neon-purple: 139, 92, 246;
+    --neon-emerald: 52, 211, 153;
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+  * { @apply border-border; }
+  html { scroll-behavior: smooth; }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', 'Outfit', system-ui, sans-serif;
+    background: #030712;
+    -webkit-font-smoothing: antialiased;
   }
 }
+
+/* ── Glassmorphism Utilities ───────────────────────────────────────────── */
+@layer utilities {
+  .glass {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-card {
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .glass-hover {
+    transition: all 0.25s ease;
+  }
+  .glass-hover:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
+    transform: translateY(-1px);
+  }
+
+  /* Neon glow utilities */
+  .neon-blue { box-shadow: 0 0 20px rgba(59, 130, 246, 0.4), 0 0 40px rgba(59, 130, 246, 0.15); }
+  .neon-cyan  { box-shadow: 0 0 20px rgba(34, 211, 238, 0.4), 0 0 40px rgba(34, 211, 238, 0.15); }
+  .neon-purple{ box-shadow: 0 0 20px rgba(139, 92, 246, 0.4), 0 0 40px rgba(139, 92, 246, 0.15); }
+  .neon-text-blue { text-shadow: 0 0 20px rgba(59, 130, 246, 0.6); }
+  .neon-text-cyan { text-shadow: 0 0 20px rgba(34, 211, 238, 0.6); }
+
+  .border-glow { border-color: rgba(59, 130, 246, 0.4); box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2); }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #60a5fa 0%, #22d3ee 50%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .sgip-gradient {
+    background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 40%, #22d3ee 100%);
+  }
+
+  .hero-gradient {
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(59,130,246,0.12) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 40% at 80% 20%, rgba(139,92,246,0.08) 0%, transparent 60%),
+                #030712;
+  }
+}
+
+/* ── Animations ────────────────────────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); }
+  50%       { box-shadow: 0 0 35px rgba(59, 130, 246, 0.7), 0 0 60px rgba(59, 130, 246, 0.3); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+@keyframes sgip-flow {
+  0%   { stroke-dashoffset: 100; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes border-spin {
+  to { transform: rotate(360deg); }
+}
+
+@layer utilities {
+  .animate-float       { animation: float 3s ease-in-out infinite; }
+  .animate-pulse-glow  { animation: pulse-glow 2s ease-in-out infinite; }
+  .animate-shimmer     { animation: shimmer 3s linear infinite; background-size: 200% auto; }
+  .animate-count-up    { animation: count-up 0.6s ease-out both; }
+}
+
+/* ── Scrollbar Styling ─────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.3); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(59, 130, 246, 0.6); }
+
+/* ── RainbowKit Overrides ──────────────────────────────────────────────── */
+[data-rk] button { font-family: 'Inter', sans-serif !important; }

@@ -9,6 +9,7 @@ import {
 import { WagmiProvider } from 'wagmi';
 import {
   baseSepolia,
+  hardhat,
 } from 'wagmi/chains';
 import {
   QueryClientProvider,
@@ -17,9 +18,9 @@ import {
 
 const config = getDefaultConfig({
   appName: 'Gasless AI Membership Wallet',
-  projectId: import.meta.env.VITE_WC_PROJECT_ID || 'YOUR_PROJECT_ID',
-  chains: [baseSepolia],
-  ssr: true,
+  projectId: import.meta.env.VITE_WC_PROJECT_ID || '8047025816913c1c87514a602058e596',
+  chains: [baseSepolia, hardhat],
+  ssr: false,
 });
 
 const queryClient = new QueryClient();
