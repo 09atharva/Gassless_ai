@@ -2,6 +2,8 @@
 
 A hackathon-ready Web3 fintech MVP built on **Base Sepolia**. Users can mint NFT memberships gaslessly by paying gas fees with **MockUSD** via the **Universal Gasless Framework (UGF)** integration.
 
+https://gassless-ai.netlify.app
+
 ## 🚀 Demo Flow
 
 1. **Connect MetaMask**: Seamless wallet integration with RainbowKit.
