@@ -33,7 +33,7 @@ export default function MintPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const { style: tiltStyle, onMouseMove: onTiltMouseMove, onMouseLeave: onTiltMouseLeave } = useTilt(6);
+  const { style: tiltStyle, glareStyle: tiltGlare, onMouseMove: onTiltMouseMove, onMouseLeave: onTiltMouseLeave } = useTilt(6);
 
   const { data: musdBalance } = useBalance({ address: address, token: MOCK_USD_ADDRESS });
 
@@ -342,11 +342,13 @@ export default function MintPage() {
               <div className="absolute w-[85%] h-[85%] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
 
               <div 
-                className="holographic-card-container w-full max-w-[380px] aspect-[3/4] rounded-2xl glass-metal relative overflow-hidden shadow-[0_30px_60px_-20px_rgba(0,0,0,0.8)] border border-white/10"
+                className="holographic-card-container w-full max-w-[380px] aspect-[3/4] rounded-2xl glass-card relative overflow-hidden shadow-[0_30px_60px_-20px_rgba(0,0,0,0.8)] border border-white/10"
                 style={tiltStyle}
                 onMouseMove={onTiltMouseMove}
                 onMouseLeave={onTiltMouseLeave}
               >
+                {/* Glare overlay — follows cursor */}
+                <div className="card-glare" style={tiltGlare} />
                 {/* Sweep top overlay */}
                 <div className="sweep-border-top" />
 

@@ -37,7 +37,7 @@ function MetricCard({
   title: string; value: string; sub: string;
   icon: React.FC<{ className?: string }>; color: string; iconBg: string; delay: number;
 }) {
-  const { style, onMouseMove, onMouseLeave } = useTilt(5);
+  const { style, glareStyle, onMouseMove, onMouseLeave } = useTilt(5);
   return (
     <motion.div
       variants={itemVariants}
@@ -47,16 +47,19 @@ function MetricCard({
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
     >
-      <div>
+      {/* Glare overlay */}
+      <div className="card-glare" style={glareStyle} />
+      {/* Content above noise/glare layers */}
+      <div className="relative z-[2]">
         <div className="flex items-center justify-between mb-4">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">{title}</span>
-          <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${iconBg}`}>
+          <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${iconBg} border border-white/5`}>
             <Icon className={`h-4.5 w-4.5 ${color}`} />
           </div>
         </div>
         <div className={`text-3xl font-black font-display ${color} tracking-tight animate-count-up`}>{value}</div>
       </div>
-      <p className="text-xs text-slate-500 mt-3 uppercase tracking-widest font-semibold">{sub}</p>
+      <p className="text-xs text-slate-500 mt-3 uppercase tracking-widest font-semibold relative z-[2]">{sub}</p>
     </motion.div>
   );
 }
@@ -263,8 +266,9 @@ export default function DashboardPage() {
             transition={{ delay: 0.25 }}
             className="glass-card rounded-2xl p-6 relative overflow-hidden border border-white/5"
           >
+            <div className="holo-orb" />
             <div className="sweep-border-top" />
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 relative z-[2]">
               <div>
                 <p className="text-sm font-semibold text-white">Cumulative Gas Savings Progress</p>
                 <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-semibold">Target: $20.00 in gas fees saved</p>

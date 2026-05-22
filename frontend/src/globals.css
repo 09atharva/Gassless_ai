@@ -62,7 +62,7 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
     position: relative;
     overflow: hidden;
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
   }
 
   .glass-card::before {
@@ -78,12 +78,49 @@
     pointer-events: none;
   }
 
+  /* Noise texture overlay for atmospheric depth */
+  .glass-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
   .glass-card:hover {
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.55);
     backdrop-filter: blur(40px);
     -webkit-backdrop-filter: blur(40px);
-    transform: translateY(-2px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 30px rgba(59, 130, 246, 0.05);
+    transform: translateY(-3px);
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.5),
+      0 0 30px rgba(59, 130, 246, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  /* Holographic card container for 3D perspective tilt */
+  .holographic-container {
+    perspective: 1000px;
+  }
+  .holographic-card {
+    transform-style: preserve-3d;
+    transition: transform 0.1s ease-out;
+  }
+
+  /* Card glare overlay — JS positions the radial-gradient to follow cursor */
+  .card-glare {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.2), transparent 60%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    mix-blend-mode: overlay;
+    z-index: 1;
   }
 
   .sweep-border-top::after {

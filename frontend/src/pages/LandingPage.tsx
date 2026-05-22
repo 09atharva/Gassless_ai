@@ -92,12 +92,12 @@ interface TiltCardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 function TiltCard({ children, className, ...props }: TiltCardProps) {
-  const { style, onMouseMove, onMouseLeave } = useTilt(5);
+  const { style, glareStyle, onMouseMove, onMouseLeave } = useTilt(5);
   return (
     <div
       className={cn(
-        'glass-metal rounded-2xl p-6 border border-white/10 relative overflow-hidden transition-all duration-300',
-        'hover:border-white/20 hover:shadow-[0_0_30px_rgba(59,130,246,0.1)]',
+        'glass-card rounded-2xl p-6 border border-white/10 relative overflow-hidden',
+        'hover:border-white/20',
         className
       )}
       style={style}
@@ -105,8 +105,16 @@ function TiltCard({ children, className, ...props }: TiltCardProps) {
       onMouseLeave={onMouseLeave}
       {...props}
     >
+      {/* Glare overlay — follows cursor */}
+      <div
+        className="card-glare"
+        style={glareStyle}
+      />
       <div className="sweep-border-top" />
-      {children}
+      {/* Content sits above the noise/glare layers */}
+      <div className="relative z-[2]">
+        {children}
+      </div>
     </div>
   );
 }
