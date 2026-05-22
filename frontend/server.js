@@ -12,8 +12,9 @@ app.use(cors({
   origin: [
     'http://localhost:3000',
     'http://localhost:5173',
-    'https://melodious-pixie-891755.netlify.app',
-    /\.netlify\.app$/
+    'https://gassless-ai.netlify.app',
+    /\.netlify\.app$/,
+    /\.onrender\.com$/
   ]
 }));
 app.use(express.json());
