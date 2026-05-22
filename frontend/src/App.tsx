@@ -41,6 +41,9 @@ function AnimatedRoutes() {
 function App() {
   return (
     <Router>
+      <div className="film-grain" />
+      <div className="ambient-glow" />
+      <div className="grid-floor" />
       <Scene3D />
       <div className="relative min-h-screen text-white">
         <AnimatedRoutes />

@@ -1,16 +1,18 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAccount, useBalance } from 'wagmi';
+import { Link, useLocation } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
-import { Card, CardFooter } from '@/components/ui/card';
+import { Card, CardFooter, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bot, User, Send, Loader2, Sparkles, Zap, CheckCircle2 } from 'lucide-react';
+import { Bot, User, Send, Loader2, Sparkles, Zap, CheckCircle2, LayoutDashboard, History, GitBranch } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTransactionHistory } from '@/hooks/use-transaction-history';
 import { SGIP, type SGIPStepState } from '@/lib/sgip';
 import { useToast } from '@/hooks/use-toast';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { cn } from '@/lib/utils';
 
 import AIOrb3D from '@/components/3d/AIOrb3D';
 import SGIPPanel from '@/components/SGIPPanel';
@@ -37,6 +39,7 @@ const suggestions = [
 
 export default function AIAssistantPage() {
   const { address, isConnected } = useAccount();
+  const { pathname } = useLocation();
   const { history, addTransaction } = useTransactionHistory();
   const { toast } = useToast();
 
@@ -193,15 +196,20 @@ export default function AIAssistantPage() {
 
   if (!isConnected) {
     return (
-      <div className="flex min-h-screen flex-col hero-gradient">
+      <div className="flex min-h-screen flex-col bg-[#0e131f] relative">
         <Navbar />
-        <main className="flex flex-1 items-center justify-center p-6">
+        <main className="flex flex-1 items-center justify-center p-6 z-10">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-            <div className="w-full max-w-md glass-card rounded-2xl border-0 p-8 text-center">
-              <AIOrb3D className="h-32 mx-auto mb-4" />
-              <h2 className="font-display text-2xl font-black text-white mb-2">Connect Wallet</h2>
-              <p className="text-slate-400 text-sm">Connect to talk to your Gemini-powered AI wallet agent.</p>
-            </div>
+            <Card className="w-full max-w-md glass-card border-0 text-center p-8 rounded-3xl relative overflow-hidden">
+              <div className="sweep-border-top" />
+              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600/20 shadow-lg border border-blue-500/20">
+                <Bot className="h-8 w-8 text-cyan-400" />
+              </div>
+              <CardTitle className="text-2xl font-black mb-3 text-white">Connect Wallet</CardTitle>
+              <CardDescription className="text-slate-400">
+                Connect your wallet to speak with your Gemini-powered AI agent.
+              </CardDescription>
+            </Card>
           </motion.div>
         </main>
       </div>
@@ -209,147 +217,217 @@ export default function AIAssistantPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col hero-gradient">
-      <Navbar />
+    <div className="flex min-h-screen bg-[#0e131f] text-slate-200">
+      {/* Desktop Side Navigation */}
+      <nav className="hidden md:flex flex-col bg-[#080e1a]/60 backdrop-blur-2xl border-r border-white/5 shadow-2xl h-screen w-64 fixed left-0 top-0 z-40">
+        <div className="p-6">
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 shadow-neon-blue">
+              <GitBranch className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-lg font-black font-display text-white">
+              Gasless<span className="gradient-text">AI</span>
+            </span>
+          </Link>
+          <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-2 font-bold">Pro Tier Node</p>
+        </div>
+        
+        <div className="flex-grow py-6 flex flex-col gap-1.5 px-4">
+          {[
+            { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+            { name: 'Forge (Mint)', href: '/mint', icon: Zap },
+            { name: 'AI Core', href: '/ai-assistant', icon: Bot },
+            { name: 'Ledger', href: '/history', icon: History },
+          ].map(item => {
+            const isActive = pathname === item.href;
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-medium text-sm",
+                  isActive
+                    ? "bg-blue-600/10 text-cyan-400 border-r-2 border-cyan-400"
+                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                )}
+              >
+                <Icon className={cn("h-4 w-4", isActive ? "text-cyan-400" : "")} />
+                <span>{item.name}</span>
+              </Link>
+            );
+          })}
+        </div>
 
-      <main className="container mx-auto flex max-w-4xl flex-1 flex-col p-4 pb-4 pt-8 gap-4">
-        {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <AIOrb3D isActive={isLoading} className="w-16 h-16 shrink-0" />
+        <div className="p-6 border-t border-white/5">
+          <ConnectButton showBalance={false} chainStatus="icon" />
+        </div>
+      </nav>
+
+      {/* Mobile Navbar */}
+      <div className="md:hidden w-full fixed top-0 left-0 right-0 z-40">
+        <Navbar />
+      </div>
+
+      {/* Main Content Area */}
+      <main className="flex-grow ml-0 md:ml-64 flex flex-col h-screen relative z-10 pt-16 md:pt-0">
+        {/* Top Header */}
+        <header className="flex justify-between items-center w-full px-6 md:px-12 py-4 border-b border-white/5 bg-[#080e1a]/30 backdrop-blur-md shrink-0">
+          <div className="flex items-center gap-3">
+            <AIOrb3D isActive={isLoading} className="w-11 h-11 shrink-0" />
             <div>
-              <h1 className="font-display text-2xl font-black text-white">AI Wallet Agent</h1>
-              <p className="text-sm text-slate-400">
-                Balance: <span className="text-blue-400 font-bold">{currentBalance.toFixed(2)} MUSD</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-black text-white tracking-tight">Neural Core Agent</span>
+                <span className="text-[9px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">active</span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Balance: <span className="text-cyan-400 font-bold">{currentBalance.toFixed(2)} MUSD</span>
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 rounded-full bg-blue-500/10 px-4 py-1.5 text-xs font-semibold text-blue-400 border border-blue-500/20">
-            <Sparkles className="h-3 w-3" /> 1 MUSD/msg · Gemini
+          <div className="flex items-center gap-2 rounded-full bg-blue-500/10 px-4 py-1.5 text-[10px] font-bold text-cyan-400 border border-blue-500/20 uppercase tracking-widest">
+            <Sparkles className="h-3 w-3 mr-1" /> 1 MUSD/msg
           </div>
-        </motion.div>
+        </header>
 
-        {/* Chat card */}
-        <Card className="flex flex-1 flex-col overflow-hidden glass-card border-0 rounded-2xl shadow-2xl" style={{ minHeight: '60vh' }}>
-          <ScrollArea className="flex-1 p-5">
-            <div className="space-y-5">
-              {messages.map((message, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`flex max-w-[80%] gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                    {/* Avatar */}
-                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full shadow-lg ${
-                      message.role === 'user' ? 'bg-slate-700' : 'bg-blue-600 shadow-neon-blue'
-                    }`}>
-                      {message.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-                    </div>
+        {/* Chat History List */}
+        <div className="flex-1 overflow-y-auto px-6 md:px-12 py-8 space-y-6 w-full max-w-5xl mx-auto">
+          {messages.map((message, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div className={`flex max-w-[80%] gap-3.5 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                {/* Avatar */}
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 shadow-lg ${
+                  message.role === 'user'
+                    ? 'bg-slate-800'
+                    : 'bg-gradient-to-br from-blue-600 to-cyan-500 shadow-neon-blue'
+                }`}>
+                  {message.role === 'user' ? <User className="h-4 w-4 text-white" /> : <Bot className="h-4 w-4 text-white" />}
+                </div>
 
-                    <div className="space-y-2">
-                      {/* Message bubble */}
-                      <div className={`relative rounded-2xl px-4 py-3 text-sm shadow-lg ${
-                        message.role === 'user'
-                          ? 'bg-blue-600 text-white rounded-tr-sm'
-                          : 'bg-white/5 text-slate-200 border border-white/8 rounded-tl-sm'
-                      }`}>
-                        <div className="whitespace-pre-wrap leading-relaxed">{message.content}</div>
+                <div className="space-y-3">
+                  {/* Message bubble */}
+                  <div className={`relative rounded-2xl p-5 text-sm leading-relaxed shadow-xl border ${
+                    message.role === 'user'
+                      ? 'glass-bubble-user text-white'
+                      : 'glass-bubble-ai text-slate-200 border-white/5'
+                  }`}>
+                    <div className="whitespace-pre-wrap">{message.content}</div>
 
-                        {message.isAction && (
-                          <div className={`mt-3 flex items-center gap-2 border-t border-white/10 pt-2.5 text-xs`}>
-                            {message.actionStatus === 'pending' ? (
-                              <span className="flex items-center gap-1.5 text-blue-400">
-                                <Loader2 className="h-3 w-3 animate-spin" /> Executing SGIP transaction...
-                              </span>
-                            ) : message.actionStatus === 'success' ? (
-                              <span className="flex items-center gap-1.5 text-emerald-400">
-                                <CheckCircle2 className="h-3 w-3" /> SGIP action complete!
-                              </span>
-                            ) : message.actionStatus === 'failed' ? (
-                              <span className="text-red-400">❌ Action failed</span>
-                            ) : (
-                              <span className="flex items-center gap-1.5 text-blue-400">
-                                <Zap className="h-3 w-3" /> Taking action via SGIP...
-                              </span>
-                            )}
-                          </div>
+                    {message.isAction && (
+                      <div className="mt-4 flex items-center gap-2 border-t border-white/5 pt-3 text-xs uppercase tracking-wider font-semibold">
+                        {message.actionStatus === 'pending' ? (
+                          <span className="flex items-center gap-1.5 text-cyan-400">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Executing SGIP pipeline...
+                          </span>
+                        ) : message.actionStatus === 'success' ? (
+                          <span className="flex items-center gap-1.5 text-emerald-400">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Pipeline executed!
+                          </span>
+                        ) : message.actionStatus === 'failed' ? (
+                          <span className="text-rose-400">❌ Pipeline failed</span>
+                        ) : (
+                          <span className="flex items-center gap-1.5 text-cyan-400">
+                            <Zap className="h-3.5 w-3.5" /> Stitching transaction...
+                          </span>
                         )}
                       </div>
-
-                      {/* Inline SGIP panel */}
-                      {message.sgipSteps && message.sgipSteps.length > 0 && (
-                        <SGIPPanel
-                          steps={message.sgipSteps}
-                          totalGasSaved={message.sgipGas}
-                          isRunning={message.actionStatus === 'pending'}
-                          compact
-                          className="max-w-xs"
-                        />
-                      )}
-                    </div>
+                    )}
                   </div>
-                </motion.div>
-              ))}
 
-              {/* Loading indicator */}
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="flex gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600">
-                      <Bot className="h-4 w-4" />
-                    </div>
-                    <div className="flex items-center gap-1.5 rounded-2xl bg-white/5 border border-white/8 px-4 py-3">
-                      {[0, 1, 2].map(i => (
-                        <span key={i} className="inline-block h-2 w-2 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
-                      ))}
-                    </div>
-                  </div>
+                  {/* Inline SGIP progress tracker */}
+                  {message.sgipSteps && message.sgipSteps.length > 0 && (
+                    <SGIPPanel
+                      steps={message.sgipSteps}
+                      totalGasSaved={message.sgipGas}
+                      isRunning={message.actionStatus === 'pending'}
+                      compact
+                      className="max-w-xs"
+                    />
+                  )}
                 </div>
-              )}
-              <div ref={scrollRef} />
-            </div>
-          </ScrollArea>
+              </div>
+            </motion.div>
+          ))}
 
-          {/* Footer */}
-          <CardFooter className="flex-col gap-3 border-t border-white/5 p-4 bg-white/[0.02]">
-            {/* Suggestion chips */}
-            <div className="flex w-full flex-wrap gap-2">
+          {/* Loading bubble */}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="flex gap-3.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 shadow-neon-blue">
+                  <Bot className="h-4 w-4 text-white" />
+                </div>
+                <div className="glass-bubble-ai px-5 py-4 rounded-2xl flex items-center space-x-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="inline-block h-2 w-2 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="inline-block h-2 w-2 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={scrollRef} />
+        </div>
+
+        {/* Input box */}
+        <div className="w-full px-6 md:px-12 pb-8 pt-4 bg-gradient-to-t from-[#0e131f] via-[#0e131f]/90 to-transparent shrink-0">
+          <div className="max-w-4xl mx-auto flex flex-col space-y-4">
+            
+            {/* Waveform indicator */}
+            {isLoading && (
+              <div className="flex justify-center items-end space-x-1.5 h-6 mb-2">
+                <div className="w-1 bg-cyan-400 rounded-t-sm animate-wave" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-1 bg-cyan-400 rounded-t-sm animate-wave" style={{ animationDelay: '0.3s' }}></div>
+                <div className="w-1 bg-blue-500 rounded-t-sm animate-wave" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-1 bg-cyan-400 rounded-t-sm animate-wave" style={{ animationDelay: '0.5s' }}></div>
+                <div className="w-1 bg-cyan-400 rounded-t-sm animate-wave" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-1 bg-blue-500 rounded-t-sm animate-wave" style={{ animationDelay: '0.4s' }}></div>
+                <div className="w-1 bg-cyan-400 rounded-t-sm animate-wave" style={{ animationDelay: '0.2s' }}></div>
+              </div>
+            )}
+
+            {/* Suggestions */}
+            <div className="flex w-full flex-wrap gap-2 justify-center">
               {suggestions.map((s) => (
                 <button
                   key={s}
                   onClick={() => setInput(s)}
-                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-400 transition-all hover:bg-blue-600 hover:text-white hover:border-blue-600"
+                  className="rounded-full border border-white/5 bg-white/3 px-3 py-1.5 text-xs text-slate-400 transition-all hover:bg-cyan-500/10 hover:text-cyan-300 hover:border-cyan-500/20"
                 >
                   {s}
                 </button>
               ))}
             </div>
 
-            {/* Input row */}
-            <div className="flex w-full gap-2">
-              <Input
-                placeholder="Tell me what to do (e.g. 'Mint my NFT')"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                className="border-white/10 bg-white/5 focus-visible:ring-blue-600 rounded-xl"
-              />
-              <Button
-                onClick={handleSend}
-                disabled={isLoading || !input.trim()}
-                className="bg-blue-600 hover:bg-blue-500 shadow-neon-blue rounded-xl px-4"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+            {/* Input form */}
+            <div className="relative w-full group">
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+              <div className="holographic-input relative flex items-center p-2 rounded-full border border-white/10 bg-black/40 backdrop-blur-xl">
+                <input
+                  placeholder="Command the AI Core..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                  className="flex-grow bg-transparent border-none outline-none focus:ring-0 text-white placeholder-slate-500 px-5 text-sm"
+                />
+                <Button
+                  onClick={handleSend}
+                  disabled={isLoading || !input.trim()}
+                  className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold h-9 w-9 p-0 rounded-full transition-all shadow-[0_0_15px_rgba(34,211,238,0.4)] flex items-center justify-center shrink-0"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
 
-            <p className="text-center text-xs text-slate-600 w-full">
-              MUSD balance: <span className="text-blue-400 font-semibold">{currentBalance.toFixed(2)}</span> · Each message costs 1 MUSD via SGIP
-            </p>
-          </CardFooter>
-        </Card>
+            <div className="text-center">
+              <p className="text-[10px] text-slate-600 uppercase tracking-widest font-bold">Neural Net Active · Encrypted Node Session</p>
+            </div>
+          </div>
+        </div>
       </main>
     </div>
   );

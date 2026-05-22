@@ -1,24 +1,28 @@
 import { useState, useCallback } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useBalance } from 'wagmi';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Zap, CheckCircle2, Coins, Info, Sparkles } from 'lucide-react';
+import { Zap, CheckCircle2, Coins, Sparkles, LayoutDashboard, Bot, History, GitBranch } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SGIP, type SGIPStepState } from '@/lib/sgip';
 import { useTransactionHistory } from '@/hooks/use-transaction-history';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
 import NFTCard3D from '@/components/3d/NFTCard3D';
 import SGIPPanel from '@/components/SGIPPanel';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { useTilt } from '@/hooks/useTilt';
+import { cn } from '@/lib/utils';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 const MEMBERSHIP_NFT_ADDRESS = (import.meta.env.VITE_MEMBERSHIP_NFT_ADDRESS || '0x0000000000000000000000000000000000000000') as `0x${string}`;
 const MOCK_USD_ADDRESS = (import.meta.env.VITE_MOCK_USD_ADDRESS || '0x0000000000000000000000000000000000000000') as `0x${string}`;
 
 export default function MintPage() {
   const { address, isConnected } = useAccount();
+  const { pathname } = useLocation();
   const [sgipSteps, setSgipSteps] = useState<SGIPStepState[]>([]);
   const [sgipRunning, setSgipRunning] = useState(false);
   const [sgipGas, setSgipGas] = useState<string | undefined>();
@@ -29,8 +33,15 @@ export default function MintPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const virtualBalance = history.filter(tx => tx.action.includes('Faucet')).length * 100
-    - history.filter(tx => tx.action.includes('AI Payment')).length;
+  const { style: tiltStyle, onMouseMove: onTiltMouseMove, onMouseLeave: onTiltMouseLeave } = useTilt(6);
+
+  const { data: musdBalance } = useBalance({ address: address, token: MOCK_USD_ADDRESS });
+
+  const virtualEarned = history.filter(tx => tx.action.includes('Faucet')).length * 100;
+  const virtualSpent = history.filter(tx => tx.action.includes('AI Payment')).length * 1;
+  const displayBalance = musdBalance
+    ? (parseFloat(musdBalance.formatted) + virtualEarned - virtualSpent).toFixed(2)
+    : (virtualEarned - virtualSpent).toFixed(2);
 
   const runMintPipeline = useCallback(async () => {
     if (!address) return;
@@ -62,7 +73,7 @@ export default function MintPage() {
       address: address!,
       mockUSDAddress: MOCK_USD_ADDRESS,
       membershipNFTAddress: MEMBERSHIP_NFT_ADDRESS,
-      balance: virtualBalance,
+      balance: parseFloat(displayBalance),
     });
 
     setSgipRunning(false);
@@ -73,7 +84,7 @@ export default function MintPage() {
       setSgipError('Pipeline failed. Please try again.');
       toast({ title: 'Mint Failed', variant: 'destructive' });
     }
-  }, [address, virtualBalance, addTransaction, toast]);
+  }, [address, displayBalance, addTransaction, toast]);
 
   const runFaucetOnly = useCallback(async () => {
     if (!address) return;
@@ -102,13 +113,22 @@ export default function MintPage() {
 
   if (!isConnected) {
     return (
-      <div className="flex min-h-screen flex-col hero-gradient">
+      <div className="flex min-h-screen bg-[#0e131f] text-slate-200">
         <Navbar />
-        <main className="flex flex-1 items-center justify-center p-6">
+        <main className="flex flex-1 items-center justify-center p-6 z-10 min-h-screen">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-            <Card className="w-full max-w-md glass-card border-0 text-center p-8">
-              <CardTitle className="text-2xl font-black mb-3">Connect Wallet</CardTitle>
-              <CardDescription>Connect your wallet to mint your gasless membership NFT.</CardDescription>
+            <Card className="w-full max-w-md glass-metal border border-white/5 text-center p-8 rounded-3xl relative overflow-hidden shadow-2xl">
+              <div className="sweep-border-top" />
+              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600/20 to-cyan-500/20 shadow-lg border border-blue-500/20">
+                <Zap className="h-8 w-8 text-cyan-400" />
+              </div>
+              <CardTitle className="text-2xl font-black mb-3 text-white">Connect Your Wallet</CardTitle>
+              <CardDescription className="text-slate-400 mb-6">
+                Connect your wallet to forge your membership neural node and unlock the GaslessAI dashboard.
+              </CardDescription>
+              <div className="flex justify-center">
+                <ConnectButton showBalance={false} chainStatus="icon" />
+              </div>
             </Card>
           </motion.div>
         </main>
@@ -118,161 +138,327 @@ export default function MintPage() {
 
   return (
     <TooltipProvider>
-      <div className="flex min-h-screen flex-col hero-gradient">
-        <Navbar />
+      <div className="flex min-h-screen bg-[#0e131f] text-slate-200">
+        {/* Desktop Side Navigation */}
+        <nav className="hidden md:flex flex-col bg-[#080e1a]/60 backdrop-blur-2xl border-r border-white/5 shadow-2xl h-screen w-64 fixed left-0 top-0 z-40">
+          <div className="p-6">
+            <Link to="/" className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 shadow-neon-blue">
+                <GitBranch className="h-4 w-4 text-white" />
+              </div>
+              <span className="text-lg font-black font-display text-white">
+                Gasless<span className="gradient-text">AI</span>
+              </span>
+            </Link>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-2 font-bold">Pro Tier Node</p>
+          </div>
+          
+          <div className="flex-grow py-6 flex flex-col gap-1.5 px-4">
+            {[
+              { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+              { name: 'Forge (Mint)', href: '/mint', icon: Zap },
+              { name: 'AI Core', href: '/ai-assistant', icon: Bot },
+              { name: 'Ledger', href: '/history', icon: History },
+            ].map(item => {
+              const isActive = pathname === item.href;
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-medium text-sm",
+                    isActive
+                      ? "bg-blue-600/10 text-cyan-400 border-r-2 border-cyan-400"
+                      : "text-slate-400 hover:text-white hover:bg-white/5"
+                  )}
+                >
+                  <Icon className={cn("h-4 w-4", isActive ? "text-cyan-400" : "")} />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+          </div>
 
-        <main className="container mx-auto flex flex-1 flex-col items-center justify-start p-6 py-10 max-w-6xl gap-8">
-          {/* Page header */}
-          <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-            <Badge className="mb-3 border-blue-500/30 bg-blue-500/10 text-blue-400 gap-1.5 text-xs">
-              <Zap className="h-3 w-3" /> SGIP Powered · Zero ETH Required
-            </Badge>
-            <h1 className="font-display text-4xl font-black text-white">Mint Your Membership</h1>
-            <p className="mt-2 text-slate-400">Gaslessly join via the Stitch Gasless Intelligence Protocol</p>
+          <div className="p-6 border-t border-white/5">
+            <ConnectButton showBalance={false} chainStatus="icon" />
+          </div>
+        </nav>
+
+        {/* Mobile Navbar */}
+        <div className="md:hidden w-full fixed top-0 left-0 right-0 z-40">
+          <Navbar />
+        </div>
+
+        {/* Main Content Canvas */}
+        <main className="flex-grow ml-0 md:ml-64 p-6 md:p-12 relative z-10 w-full max-w-[1440px] mx-auto min-h-screen space-y-12 pt-20 md:pt-12">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-white/5 pb-6"
+          >
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 pulse-dot"></span>
+                <span className="text-[10px] text-cyan-400 uppercase tracking-widest font-bold">Network Live</span>
+              </div>
+              <h1 className="font-display text-4xl md:text-5xl font-black text-white tracking-tight">Genesis Neural Node</h1>
+              <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-semibold">
+                Forge your perpetual license to the GaslessAI ecosystem.
+              </p>
+            </div>
           </motion.div>
 
-          <div className="grid w-full gap-8 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px]">
-            {/* Left: how it works + SGIP panel */}
-            <div className="space-y-6">
-              {/* How it works */}
-              <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
-                <Card className="glass-card border-0 rounded-2xl">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-bold">How SGIP Minting Works</CardTitle>
-                    <CardDescription>One click — multiple gasless operations stitched together</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {[
-                        { step: 1, title: 'Balance Intelligence', desc: 'SGIP checks your MUSD. Skips faucet if you have enough.', color: 'bg-blue-500/15 text-blue-400' },
-                        { step: 2, title: 'Gasless Faucet', desc: 'If needed, claims 100 MUSD gaslessly via UGF relayer.', color: 'bg-cyan-500/15 text-cyan-400' },
-                        { step: 3, title: 'Atomic Mint', desc: 'Mints your GAIM NFT with MUSD covering the gas fee.', color: 'bg-purple-500/15 text-purple-400' },
-                        { step: 4, title: 'Live Telemetry', desc: 'Real-time step tracking & gas savings accumulation.', color: 'bg-emerald-500/15 text-emerald-400' },
-                      ].map((item) => (
-                        <div key={item.step} className="flex gap-4">
-                          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${item.color} font-bold text-sm`}>
-                            {item.step}
-                          </div>
-                          <div className="pt-1">
-                            <h3 className="font-semibold text-white text-sm">{item.title}</h3>
-                            <p className="text-xs text-slate-400 mt-0.5">{item.desc}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+          {/* Showcase & Minting UI Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+            {/* Left: Interaction Area */}
+            <div className="lg:col-span-7 flex flex-col gap-8">
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-white font-display">Autonomous Allocation</h2>
+                <p className="text-sm text-slate-400 leading-relaxed">
+                  Deploy your autonomous agent core to the blockchain. This cryptographic node acts as a decentralized intelligence license, unlocking full premium access to GaslessAI models and gasless transaction routing logic.
+                </p>
+              </div>
 
-              {/* SGIP pipeline panel */}
+              {/* Minting Controls Card */}
+              <div className="glass-metal rounded-2xl p-8 space-y-6 relative overflow-hidden border border-white/5 sweep-border-top">
+                <div className="grid grid-cols-2 gap-6 relative z-10">
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Mint Price</p>
+                    <p className="text-2xl font-black font-display text-white">
+                      Free <span className="text-slate-500 text-sm line-through font-normal ml-2">0.05 ETH</span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Allocation Available</p>
+                    <p className="text-2xl font-black font-display text-white">
+                      1,204 <span className="text-slate-500 text-sm font-normal">/ 5,000</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 relative z-10 border-t border-white/5 pt-6">
+                  <div className="flex justify-between text-xs text-slate-400 font-semibold uppercase tracking-wider">
+                    <span>Processing Allocation</span>
+                    <span className="text-cyan-400">{sgipRunning ? 'Executing SGIP...' : 'Ready'}</span>
+                  </div>
+                  {/* Progress beam */}
+                  <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                    <motion.div 
+                      className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.5)]"
+                      initial={{ width: '25%' }}
+                      animate={sgipRunning ? { width: ['25%', '95%', '100%'] } : { width: '25%' }}
+                      transition={sgipRunning ? { repeat: Infinity, duration: 4, ease: 'easeInOut' } : {}}
+                    />
+                  </div>
+                </div>
+
+                {/* Mint fee preview list */}
+                <div className="space-y-3.5 border-t border-white/5 pt-4 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <div className="flex justify-between items-center">
+                    <span>Base Gas Fee (Standard)</span>
+                    <span className="text-slate-500 line-through">0.0024 ETH</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>You Pay via SGIP</span>
+                    <span className="text-cyan-400 font-bold">0 MockUSD</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Gas Saved</span>
+                    <span className="text-emerald-400 font-bold">~$8.50</span>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={runMintPipeline}
+                  disabled={sgipRunning || mintSuccess}
+                  className="w-full h-14 text-sm font-bold bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white rounded-xl shadow-neon-blue hover:shadow-neon-cyan transition-all duration-300 flex items-center justify-center gap-2 relative overflow-hidden group"
+                >
+                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  {sgipRunning ? (
+                    <><Sparkles className="h-4.5 w-4.5 animate-spin" /> Executing SGIP...</>
+                  ) : mintSuccess ? (
+                    <><CheckCircle2 className="h-4.5 w-4.5" /> Membership Minted!</>
+                  ) : (
+                    <><Zap className="h-4.5 w-4.5" /> Forge Node via SGIP</>
+                  )}
+                </Button>
+              </div>
+
+              {/* SGIP steps container inside left column */}
               <AnimatePresence>
                 {sgipSteps.length > 0 && (
-                  <SGIPPanel
-                    steps={sgipSteps}
-                    totalGasSaved={sgipGas}
-                    isRunning={sgipRunning}
-                    error={sgipError}
-                  />
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <SGIPPanel
+                      steps={sgipSteps}
+                      totalGasSaved={sgipGas}
+                      isRunning={sgipRunning}
+                      error={sgipError}
+                    />
+                  </motion.div>
                 )}
               </AnimatePresence>
 
-              {/* Faucet card */}
-              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                <Card className="glass-card border-0 rounded-2xl border-l-4 border-l-amber-500/50">
-                  <CardContent className="pt-5">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15">
-                        <Coins className="h-5 w-5 text-amber-400" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-bold text-white">Need MockUSD?</h3>
-                        <p className="text-sm text-slate-400 mt-1">
-                          Claim 100 MUSD gaslessly to cover your mint and AI interactions.
-                        </p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={runFaucetOnly}
-                          disabled={sgipRunning || faucetSuccess}
-                          className="mt-3 border-amber-500/30 text-amber-400 hover:bg-amber-500/10 gap-2"
-                        >
-                          {faucetSuccess ? (
-                            <><CheckCircle2 className="h-3.5 w-3.5" /> Received!</>
-                          ) : sgipRunning ? (
-                            <><Sparkles className="h-3.5 w-3.5 animate-spin" /> Claiming...</>
-                          ) : (
-                            <><Coins className="h-3.5 w-3.5" /> Claim 100 MUSD</>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+              {/* Faucet/MUSD Fallback warning card */}
+              <div className="glass-metal border-l-4 border-amber-500/50 rounded-2xl p-6 relative overflow-hidden border border-white/5">
+                <div className="flex gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20">
+                    <Coins className="h-5 w-5 text-amber-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-white text-sm">Need MockUSD?</h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Claim 100 MUSD gaslessly to cover your minting pipeline and AI core interactions.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={runFaucetOnly}
+                      disabled={sgipRunning || faucetSuccess}
+                      className="mt-3.5 border-amber-500/30 text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/50 gap-2 font-bold text-xs uppercase tracking-wider h-9"
+                    >
+                      {faucetSuccess ? (
+                        <><CheckCircle2 className="h-3.5 w-3.5" /> Received!</>
+                      ) : sgipRunning ? (
+                        <><Sparkles className="h-3.5 w-3.5 animate-spin" /> Requesting...</>
+                      ) : (
+                        <><Coins className="h-3.5 w-3.5" /> Claim 100 MUSD</>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Right: 3D NFT Card + Mint Action */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.15 }}
-              className="flex flex-col gap-6"
-            >
-              <Card className="glass-card border-0 rounded-2xl overflow-hidden">
-                {/* 3D Card */}
-                <div className="relative h-72 bg-gradient-to-br from-blue-600/10 via-purple-600/5 to-transparent">
+            {/* Right: Holographic Showcase Card */}
+            <div className="lg:col-span-5 flex flex-col items-center justify-center relative">
+              {/* Radial Backdrop Glow */}
+              <div className="absolute w-[85%] h-[85%] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
+
+              <div 
+                className="holographic-card-container w-full max-w-[380px] aspect-[3/4] rounded-2xl glass-metal relative overflow-hidden shadow-[0_30px_60px_-20px_rgba(0,0,0,0.8)] border border-white/10"
+                style={tiltStyle}
+                onMouseMove={onTiltMouseMove}
+                onMouseLeave={onTiltMouseLeave}
+              >
+                {/* Sweep top overlay */}
+                <div className="sweep-border-top" />
+
+                {/* 3D Content Layers */}
+                <div className="absolute inset-4 rounded-xl overflow-hidden border border-white/5 bg-slate-950/40">
+                  {/* NFT Card Canvas */}
                   <NFTCard3D className="w-full h-full" />
                 </div>
 
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-xl font-black">GaslessAI Member NFT</CardTitle>
-                    <Badge className="bg-blue-600 hover:bg-blue-600 text-white border-0">Gasless</Badge>
+                {/* Info Text overlays */}
+                <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end">
+                  <div>
+                    <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-widest mb-0.5">Tier I</p>
+                    <p className="text-lg font-black text-white leading-tight font-display">Genesis Node</p>
                   </div>
-                  <CardDescription>Unlock premium AI features and exclusive rewards.</CardDescription>
-                </CardHeader>
-
-                <CardContent>
-                  <div className="space-y-3 text-sm">
-                    {[
-                      { label: 'Mint Price', value: 'Free', valueClass: 'text-white font-bold' },
-                      { label: 'Gas Fee (Normal)', value: '0.0024 ETH', valueClass: 'text-slate-500 line-through' },
-                      { label: 'You Pay via SGIP', value: '0 MockUSD', valueClass: 'text-blue-400 font-bold' },
-                      { label: 'Gas Savings', value: '~$8.50', valueClass: 'text-emerald-400 font-bold' },
-                    ].map(row => (
-                      <div key={row.label} className="flex justify-between items-center border-b border-white/5 pb-2">
-                        <span className="text-slate-400">{row.label}</span>
-                        <span className={row.valueClass}>{row.value}</span>
-                      </div>
-                    ))}
+                  <div className="w-10 h-10 rounded-xl bg-slate-900/80 backdrop-blur-md flex items-center justify-center border border-white/10 shadow-lg">
+                    <Zap className="h-4.5 w-4.5 text-cyan-400 animate-pulse" />
                   </div>
-                </CardContent>
-
-                <CardFooter className="pt-0">
-                  <Button
-                    onClick={runMintPipeline}
-                    disabled={sgipRunning || mintSuccess}
-                    className="w-full h-12 text-base font-bold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 shadow-neon-blue"
-                  >
-                    {sgipRunning ? (
-                      <><Sparkles className="mr-2 h-5 w-5 animate-spin" /> Executing SGIP...</>
-                    ) : mintSuccess ? (
-                      <><CheckCircle2 className="mr-2 h-5 w-5" /> Membership Minted!</>
-                    ) : (
-                      <><Zap className="mr-2 h-5 w-5" /> Mint via SGIP</>
-                    )}
-                  </Button>
-                </CardFooter>
-              </Card>
-
-              {/* Info callout */}
-              <div className="flex items-start gap-3 rounded-2xl border border-blue-500/15 bg-blue-500/5 px-4 py-3">
-                <Info className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
-                <p className="text-xs text-slate-400">
-                  The SGIP pipeline will automatically check your balance, claim MUSD if needed, and mint your NFT — all in a single gasless flow.
-                </p>
+                </div>
               </div>
-            </motion.div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-4" />
+
+          {/* Minting Sequence Timeline */}
+          <div className="max-w-4xl mx-auto space-y-8">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl md:text-3xl font-black text-white font-display">Minting Sequence</h2>
+              <p className="text-sm text-slate-500">The autonomous protocol ensures mathematically secure provenance.</p>
+            </div>
+
+            <div className="relative pl-8 md:pl-0 pt-6">
+              {/* Central Line */}
+              <div className="absolute left-8 md:left-1/2 top-0 bottom-0 w-px bg-white/5 -translate-x-1/2" />
+
+              <div className="space-y-16">
+                {[
+                  {
+                    phase: 'Phase 01',
+                    title: 'Initialize Core',
+                    desc: 'Secure wallet connection establishes the encrypted tunnel for asset allocation.',
+                    iconBg: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
+                    stepIdx: 0,
+                  },
+                  {
+                    phase: 'Phase 02',
+                    title: 'Forge Asset',
+                    desc: 'The smart contract allocates unique neural weights to your specific token ID.',
+                    iconBg: 'bg-purple-500/10 border-purple-500/20 text-purple-400',
+                    stepIdx: 1,
+                  },
+                  {
+                    phase: 'Phase 03',
+                    title: 'Verify Ledger',
+                    desc: 'Cryptographic confirmation anchors your node directly to the immutable layer.',
+                    iconBg: 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400',
+                    stepIdx: 2,
+                  },
+                ].map((step, idx) => {
+                  const stepState = sgipSteps[step.stepIdx];
+                  const isCompleted = stepState?.status === 'success';
+                  const isCurrent = stepState?.status === 'running';
+
+                  return (
+                    <div 
+                      key={step.phase} 
+                      className={cn(
+                        "relative flex flex-col md:flex-row items-center md:justify-between transition-all duration-500",
+                        idx % 2 === 0 ? "" : "md:flex-row-reverse",
+                        isCompleted || isCurrent ? "opacity-100" : "opacity-40"
+                      )}
+                    >
+                      {/* Text */}
+                      <div className={cn(
+                        "md:w-[45%] mb-4 md:mb-0",
+                        idx % 2 === 0 ? "text-left md:text-right pr-0 md:pr-8" : "text-left pl-0 md:pl-8"
+                      )}>
+                        <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-widest mb-1">{step.phase}</p>
+                        <h3 className="text-lg font-bold text-white font-display">{step.title}</h3>
+                        <p className="text-xs text-slate-400 mt-1 max-w-sm leading-relaxed">{step.desc}</p>
+                      </div>
+
+                      {/* Timeline Dot Node */}
+                      <div className={cn(
+                        "absolute left-0 md:left-1/2 -translate-x-1/2 w-4 h-4 rounded-full border-2 transition-all duration-500 z-10",
+                        isCompleted 
+                          ? "bg-cyan-400 border-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.8)]" 
+                          : isCurrent 
+                          ? "bg-blue-500 border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)] animate-pulse" 
+                          : "bg-slate-900 border-white/20"
+                      )} />
+
+                      {/* Box Card indicator */}
+                      <div className={cn(
+                        "md:w-[45%] flex",
+                        idx % 2 === 0 ? "pl-0 md:pl-8 justify-start" : "pr-0 md:pr-8 justify-end"
+                      )}>
+                        <div className={cn(
+                          "glass-metal p-5 rounded-2xl border border-white/5 transition-all duration-300 shadow-lg",
+                          isCompleted && "border-cyan-500/20 bg-cyan-500/5",
+                          isCurrent && "border-blue-500/30 bg-blue-500/5 animate-pulse"
+                        )}>
+                          <Zap className={cn("h-6 w-6", isCompleted ? "text-cyan-400" : isCurrent ? "text-blue-400" : "text-slate-600")} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </main>
 
@@ -291,14 +477,15 @@ export default function MintPage() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.85 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                className="w-full max-w-md glass-card rounded-3xl p-10 text-center border border-emerald-500/20 shadow-[0_0_60px_rgba(52,211,153,0.2)]"
+                className="w-full max-w-md glass-metal rounded-3xl p-10 text-center border border-emerald-500/20 shadow-[0_0_60px_rgba(52,211,153,0.2)] relative overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
               >
+                <div className="sweep-border-top" />
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.1, type: 'spring' }}
-                  className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/20 ring-2 ring-emerald-500/30"
+                  className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/20 ring-2 ring-emerald-500/30 border border-emerald-500/20"
                 >
                   <CheckCircle2 className="h-10 w-10 text-emerald-400" />
                 </motion.div>
@@ -309,7 +496,10 @@ export default function MintPage() {
                     Total gas saved: {sgipGas} 🎉
                   </p>
                 )}
-                <Button className="w-full bg-blue-600 hover:bg-blue-500 h-12 font-bold" onClick={() => navigate('/dashboard')}>
+                <Button 
+                  className="w-full bg-blue-600 hover:bg-blue-500 h-12 font-bold rounded-xl shadow-neon-blue"
+                  onClick={() => navigate('/dashboard')}
+                >
                   Go to Dashboard
                 </Button>
               </motion.div>

@@ -1,130 +1,200 @@
 /**
- * Scene3D — Persistent Three.js background canvas.
+ * Scene3D — Immersive holographic neural sphere background.
+ *
+ * 3,000 particles distributed on a spherical shell that:
+ *  • Auto-rotates slowly
+ *  • Tilts toward the mouse cursor with smooth damping
+ *  • Dives the camera from z=28 → z=4 based on scroll position (landing page)
+ *
+ * Uses additive blending for a luminous cyan/blue glow.
  */
-import { useRef, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { useRef, useMemo, useEffect } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Stars } from '@react-three/drei';
 import * as THREE from 'three';
 
-function ParticleField({ count = 100 }: { count?: number }) {
-  const meshRef = useRef<THREE.Points>(null);
-  const lineRef = useRef<THREE.LineSegments>(null);
+/* ── Scroll-driven camera ────────────────────────────────────────────── */
 
-  const { positions, linePositions } = useMemo(() => {
-    const pts: number[] = [];
-    const linePts: number[] = [];
-    const nodes: [number, number, number][] = [];
+function ScrollCamera() {
+  const { camera } = useThree();
+  const scrollRef = useRef(0);
+  const targetZ = useRef(28);
+
+  useEffect(() => {
+    const onScroll = () => {
+      scrollRef.current = window.scrollY;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useFrame(() => {
+    // Map scroll 0..800px → camera z 28..4
+    const maxScroll = 800;
+    const progress = Math.min(scrollRef.current / maxScroll, 1);
+    targetZ.current = 28 - progress * 24; // 28 → 4
+    camera.position.z += (targetZ.current - camera.position.z) * 0.06;
+  });
+
+  return null;
+}
+
+/* ── Neural Particle Sphere ──────────────────────────────────────────── */
+
+function NeuralSphere({ count = 3000 }: { count?: number }) {
+  const pointsRef = useRef<THREE.Points>(null);
+  const mouseRef = useRef({ x: 0, y: 0 });
+
+  // Generate spherical point cloud
+  const geometry = useMemo(() => {
+    const positions = new Float32Array(count * 3);
+    const sizes = new Float32Array(count);
+    const radius = 12;
 
     for (let i = 0; i < count; i++) {
-      const x = (Math.random() - 0.5) * 30;
-      const y = (Math.random() - 0.5) * 20;
-      const z = (Math.random() - 0.5) * 15;
-      pts.push(x, y, z);
-      nodes.push([x, y, z]);
+      const theta = 2 * Math.PI * Math.random();
+      const phi = Math.acos(2 * Math.random() - 1);
+      // Slight depth variation for organic feel
+      const r = radius * (0.92 + Math.random() * 0.16);
+
+      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i * 3 + 2] = r * Math.cos(phi);
+
+      sizes[i] = 0.03 + Math.random() * 0.06;
     }
 
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const dx = nodes[i][0] - nodes[j][0];
-        const dy = nodes[i][1] - nodes[j][1];
-        const dz = nodes[i][2] - nodes[j][2];
-        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (dist < 5.5) {
-          linePts.push(...nodes[i], ...nodes[j]);
-        }
-      }
-    }
-
-    return {
-      positions: new Float32Array(pts),
-      linePositions: new Float32Array(linePts),
-    };
-  }, [count]);
-
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
-    if (meshRef.current) {
-      meshRef.current.rotation.y = t * 0.04;
-      meshRef.current.rotation.x = Math.sin(t * 0.02) * 0.1;
-    }
-    if (lineRef.current) {
-      lineRef.current.rotation.y = t * 0.04;
-      lineRef.current.rotation.x = Math.sin(t * 0.02) * 0.1;
-    }
-  });
-
-  const lineGeo = useMemo(() => {
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
-    return geo;
-  }, [linePositions]);
-
-  const ptGeo = useMemo(() => {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('aSize', new THREE.Float32BufferAttribute(sizes, 1));
     return geo;
-  }, [positions]);
+  }, [count]);
 
-  return (
-    <group>
-      <lineSegments ref={lineRef}>
-        <primitive object={lineGeo} />
-        <lineBasicMaterial color="#1d4ed8" transparent opacity={0.15} />
-      </lineSegments>
-      <points ref={meshRef}>
-        <primitive object={ptGeo} />
-        <pointsMaterial size={0.12} color="#3b82f6" transparent opacity={0.7} sizeAttenuation />
-      </points>
-    </group>
-  );
-}
-
-function FloatingOrbs() {
-  const group = useRef<THREE.Group>(null);
+  // Track mouse for interactive tilt
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      mouseRef.current.x = (e.clientX / window.innerWidth - 0.5) * 2;
+      mouseRef.current.y = (e.clientY / window.innerHeight - 0.5) * 2;
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    return () => window.removeEventListener('mousemove', onMouseMove);
+  }, []);
 
   useFrame(({ clock }) => {
+    if (!pointsRef.current) return;
     const t = clock.getElapsedTime();
-    if (group.current) {
-      group.current.children.forEach((child, i) => {
-        child.position.y = Math.sin(t * 0.5 + i * 1.2) * 0.4 + (child.userData.baseY as number ?? 0);
-        child.rotation.y = t * 0.3 + i;
-        child.rotation.x = t * 0.2 + i * 0.5;
-      });
-    }
+    const mesh = pointsRef.current;
+
+    // Slow auto-rotation
+    mesh.rotation.y += 0.0015;
+    mesh.rotation.x += 0.0008;
+
+    // Mouse-driven tilt with smooth damping
+    const targetRotY = mouseRef.current.x * 0.3;
+    const targetRotX = mouseRef.current.y * 0.2;
+    mesh.rotation.y += (targetRotY - mesh.rotation.y) * 0.02;
+    mesh.rotation.x += (targetRotX - mesh.rotation.x) * 0.02;
+
+    // Subtle breathing scale
+    const breathe = 1 + Math.sin(t * 0.4) * 0.02;
+    mesh.scale.setScalar(breathe);
   });
 
-  const orbs = useMemo(() =>
-    Array.from({ length: 6 }, (_, i) => ({
-      x: (Math.random() - 0.5) * 20,
-      y: (Math.random() - 0.5) * 10,
-      z: -5 - Math.random() * 8,
-      scale: 0.15 + Math.random() * 0.25,
-      color: i % 2 === 0 ? '#3b82f6' : '#8b5cf6',
-    })),
-  []);
+  return (
+    <points ref={pointsRef} geometry={geometry}>
+      <pointsMaterial
+        size={0.06}
+        color="#adc6ff"
+        transparent
+        opacity={0.85}
+        blending={THREE.AdditiveBlending}
+        depthWrite={false}
+        sizeAttenuation
+      />
+    </points>
+  );
+}
+
+/* ── Inner Wireframe Sphere (subtle structure) ───────────────────────── */
+
+function WireframeSphere() {
+  const meshRef = useRef<THREE.Mesh>(null);
+
+  useFrame(({ clock }) => {
+    if (!meshRef.current) return;
+    meshRef.current.rotation.y = clock.getElapsedTime() * 0.08;
+    meshRef.current.rotation.x = clock.getElapsedTime() * 0.05;
+  });
 
   return (
-    <group ref={group}>
-      {orbs.map((orb, i) => (
-        <mesh key={i} position={[orb.x, orb.y, orb.z]} userData={{ baseY: orb.y }} scale={orb.scale}>
-          <icosahedronGeometry args={[1, 1]} />
-          <meshStandardMaterial color={orb.color} emissive={orb.color} emissiveIntensity={0.4} wireframe transparent opacity={0.5} />
-        </mesh>
-      ))}
+    <mesh ref={meshRef}>
+      <icosahedronGeometry args={[9, 2]} />
+      <meshBasicMaterial
+        color="#1d4ed8"
+        wireframe
+        transparent
+        opacity={0.04}
+      />
+    </mesh>
+  );
+}
+
+/* ── Ambient Fog Planes ──────────────────────────────────────────────── */
+
+function FogPlanes() {
+  return (
+    <group>
+      {/* Soft cyan radial glow behind the sphere */}
+      <mesh position={[0, 0, -15]}>
+        <planeGeometry args={[60, 60]} />
+        <meshBasicMaterial
+          color="#2fd9f4"
+          transparent
+          opacity={0.015}
+        />
+      </mesh>
+      {/* Warm blue glow offset */}
+      <mesh position={[-8, 5, -20]}>
+        <planeGeometry args={[40, 40]} />
+        <meshBasicMaterial
+          color="#adc6ff"
+          transparent
+          opacity={0.01}
+        />
+      </mesh>
     </group>
   );
 }
+
+/* ── Main Scene Export ───────────────────────────────────────────────── */
 
 export default function Scene3D() {
   return (
     <div className="fixed inset-0 -z-10 pointer-events-none">
-      <Canvas camera={{ position: [0, 0, 12], fov: 60 }} gl={{ antialias: true, alpha: true }} style={{ background: 'transparent' }}>
-        <ambientLight intensity={0.2} />
-        <pointLight position={[10, 10, 10]} intensity={0.5} color="#3b82f6" />
-        <pointLight position={[-10, -10, 5]} intensity={0.3} color="#8b5cf6" />
-        <Stars radius={60} depth={30} count={800} factor={2} saturation={0} fade speed={0.4} />
-        <ParticleField count={100} />
-        <FloatingOrbs />
+      <Canvas
+        camera={{ position: [0, 0, 28], fov: 65 }}
+        gl={{ antialias: true, alpha: true }}
+        style={{ background: 'transparent' }}
+        dpr={[1, 1.5]}
+      >
+        <ambientLight intensity={0.15} />
+        <pointLight position={[10, 10, 10]} intensity={0.4} color="#3b82f6" />
+        <pointLight position={[-10, -8, 5]} intensity={0.25} color="#8b5cf6" />
+
+        <Stars
+          radius={80}
+          depth={40}
+          count={600}
+          factor={1.8}
+          saturation={0}
+          fade
+          speed={0.3}
+        />
+
+        <NeuralSphere count={3000} />
+        <WireframeSphere />
+        <FogPlanes />
+        <ScrollCamera />
       </Canvas>
     </div>
   );
