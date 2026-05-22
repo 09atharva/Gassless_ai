@@ -121,38 +121,35 @@ export default function AIAssistantPage() {
   const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return;
 
-    if (currentBalance < 1) {
-      toast({
-        title: '💸 Insufficient MUSD',
-        description: 'You need 1 MUSD to use the AI. Ask me to "Give me some MockUSD"!',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     const userMessage = input.trim();
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
 
     try {
-      // Pay for AI usage via SGIP
-      const payPipeline = SGIP.stitch([SGIP.Steps.aiPayment()]);
-      await payPipeline.execute({
-        address: address!,
-        mockUSDAddress: MOCK_USD_ADDRESS,
-        membershipNFTAddress: MEMBERSHIP_NFT_ADDRESS,
-        balance: currentBalance,
-      });
-      const payResult = payPipeline.state[0]?.result;
-      if (payResult?.hash) {
-        addTransaction({
-          hash: payResult.hash,
-          action: 'Gasless AI Payment',
-          timestamp: Date.now(),
-          gasSaved: payResult.gasSaved ?? '0 ETH ($0.35)',
-          status: 'success',
-        });
+      // Try SGIP payment (gracefully skip if it fails — e.g. contracts not deployed)
+      if (currentBalance >= 1) {
+        try {
+          const payPipeline = SGIP.stitch([SGIP.Steps.aiPayment()]);
+          await payPipeline.execute({
+            address: address!,
+            mockUSDAddress: MOCK_USD_ADDRESS,
+            membershipNFTAddress: MEMBERSHIP_NFT_ADDRESS,
+            balance: currentBalance,
+          });
+          const payResult = payPipeline.state[0]?.result;
+          if (payResult?.hash) {
+            addTransaction({
+              hash: payResult.hash,
+              action: 'Gasless AI Payment',
+              timestamp: Date.now(),
+              gasSaved: payResult.gasSaved ?? '0 ETH ($0.35)',
+              status: 'success',
+            });
+          }
+        } catch (payErr) {
+          console.warn('SGIP payment skipped:', payErr);
+        }
       }
 
       // Call AI backend
