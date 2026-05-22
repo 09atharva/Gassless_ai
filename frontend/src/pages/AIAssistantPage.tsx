@@ -173,6 +173,10 @@ export default function AIAssistantPage() {
       });
 
       const data = await response.json();
+      console.log('AI Response:', data);
+      if (data.error) {
+        throw new Error(data.error);
+      }
       let aiContent: string = data.text ?? 'Sorry, I could not generate a response.';
       const actionMatch = aiContent.match(/\{"action":\s*"([^"]+)"\}/);
       const action = actionMatch ? actionMatch[1] : null;
@@ -187,8 +191,10 @@ export default function AIAssistantPage() {
         }
         return next;
       });
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I'm having trouble connecting to my brain right now. Please check the AI server is running." }]);
+    } catch (err: any) {
+      console.error('AI Chat Error:', err);
+      const errMsg = err?.message || "I'm having trouble connecting to my brain right now.";
+      setMessages(prev => [...prev, { role: 'assistant', content: `Sorry, ${errMsg}` }]);
     } finally {
       setIsLoading(false);
     }
