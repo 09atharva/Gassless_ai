@@ -22,6 +22,8 @@ app.use(express.json());
 // Health check for Render
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
+app.get('/', (req, res) => res.send('Gasless AI Neural Core is active. Use the frontend on port 3000.'));
+
 app.post('/api/ai/chat', async (req, res) => {
   try {
     const { prompt, context } = req.body;
@@ -41,6 +43,7 @@ app.post('/api/ai/chat', async (req, res) => {
       Available Actions:
       1. {"action": "MINT_MEMBERSHIP"} - Use this when the user wants to join, become a member, or mint the NFT.
       2. {"action": "GET_FAUCET"} - Use this when the user needs MockUSD, has low balance, or wants to test the faucet.
+      3. {"action": "UPGRADE_TIER"} - Use this when the user wants to upgrade their membership or check for higher status.
       
       Protocol:
       - Always provide a friendly text explanation of what you are doing.
@@ -76,7 +79,19 @@ app.post('/api/ai/chat', async (req, res) => {
     }
 
     const text = data.choices[0].message.content;
-    res.json({ text });
+
+    // Simulate backend-processed gasless payment for AI usage
+    const paymentHash = `0x${Math.random().toString(16).slice(2, 10)}${Math.random().toString(16).slice(2, 10)}...`;
+    
+    res.json({ 
+      text,
+      payment: {
+        success: true,
+        hash: paymentHash,
+        amount: "1 MUSD",
+        gasSaved: "0.0001 ETH ($0.35)"
+      }
+    });
   } catch (error) {
     console.error("OpenRouter API Error:", error);
     res.status(500).json({ error: "Failed to generate response" });

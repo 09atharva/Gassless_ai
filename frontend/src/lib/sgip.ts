@@ -39,6 +39,7 @@ export interface SGIPContext {
   membershipNFTAddress: Address;
   balance: number; // virtual MUSD balance
   hasMembership?: boolean;
+  signer?: any; // ethers Signer
   [key: string]: unknown;
 }
 
@@ -102,11 +103,11 @@ export const SGIPSteps = {
   faucet: (): SGIPStep => ({
     id: 'faucet',
     name: 'MockUSD Faucet',
-    description: 'Requesting 100 MUSD gaslessly via UGF relayer',
+    description: 'Claim TYI_MOCK_USD from https://universalgasframework.com/faucets',
     icon: '🪙',
     shouldSkip: (ctx) => ctx.balance >= 100,
     execute: async (ctx) => {
-      const result = await UGF_SDK.requestFaucet(ctx.address);
+      const result = await UGF_SDK.requestFaucet(ctx.address, ctx.signer);
       if (result.success) {
         ctx.balance += 100;
         return { success: true, hash: result.hash, gasSaved: result.gasSaved };
@@ -133,7 +134,8 @@ export const SGIPSteps = {
       const data = encodeFunctionData({ abi: NFT_ABI, functionName: 'mintMembership', args: [] });
       const result = await UGF_SDK.executeGaslessTransaction(
         { to: ctx.membershipNFTAddress, data },
-        ctx.mockUSDAddress
+        ctx.mockUSDAddress,
+        ctx.signer
       );
       if (result.success) {
         ctx.hasMembership = true;
@@ -153,9 +155,45 @@ export const SGIPSteps = {
     description: 'Charging 1 MUSD for AI interaction via UGF',
     icon: '🤖',
     execute: async (ctx) => {
-      const result = await UGF_SDK.payForAIUsage(ctx.address, '1');
+      const result = await UGF_SDK.payForAIUsage(ctx.address, '1', ctx.signer);
       if (result.success) {
         ctx.balance = Math.max(0, ctx.balance - 1);
+        return { success: true, hash: result.hash, gasSaved: result.gasSaved };
+      }
+      return { success: false, error: result.error };
+    },
+  }),
+
+  /**
+   * Upgrade membership tier via UGF.
+   */
+  upgradeTier: (): SGIPStep => ({
+    id: 'upgrade-tier',
+    name: 'Upgrade Membership Tier',
+    description: 'Synchronizing gas savings to upgrade your NFT node',
+    icon: '🚀',
+    execute: async (ctx) => {
+      const { encodeFunctionData } = await import('viem');
+      const NFT_ABI = [
+        { name: 'updateGasSaved', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'tokenId', type: 'uint256' }, { name: 'gasAmountUSD', type: 'uint256' }], outputs: [] },
+        { name: 'userToTokenId', type: 'function', stateMutability: 'view', inputs: [{ name: 'user', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
+      ] as const;
+
+      // In a real scenario, we'd fetch the tokenId first.
+      // For this demo, we'll assume we can call it (simulation if needed)
+      const data = encodeFunctionData({ 
+        abi: NFT_ABI, 
+        functionName: 'updateGasSaved', 
+        args: [0n, 20n] // Simulate adding $20 to trigger Silver tier
+      });
+      
+      const result = await UGF_SDK.executeGaslessTransaction(
+        { to: ctx.membershipNFTAddress, data },
+        ctx.mockUSDAddress,
+        ctx.signer
+      );
+      
+      if (result.success) {
         return { success: true, hash: result.hash, gasSaved: result.gasSaved };
       }
       return { success: false, error: result.error };

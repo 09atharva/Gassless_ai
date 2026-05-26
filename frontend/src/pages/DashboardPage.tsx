@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useAccount, useBalance } from 'wagmi';
+import { useAccount, useBalance, useWalletClient } from 'wagmi';
 import { Link, useLocation } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -16,7 +16,7 @@ import { SGIP, type SGIPStepState } from '@/lib/sgip';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTilt } from '@/hooks/useTilt';
-import { cn } from '@/lib/utils';
+import { cn, walletClientToSigner } from '@/lib/utils';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 const MOCK_USD_ADDRESS = (import.meta.env.VITE_MOCK_USD_ADDRESS || '0x0000000000000000000000000000000000000000') as `0x${string}`;
@@ -66,6 +66,7 @@ function MetricCard({
 
 export default function DashboardPage() {
   const { address, isConnected } = useAccount();
+  const { data: walletClient } = useWalletClient();
   const { pathname } = useLocation();
   const { history, addTransaction } = useTransactionHistory();
   const { toast } = useToast();
@@ -89,12 +90,13 @@ export default function DashboardPage() {
   }, 0);
 
   const runQuickPipeline = useCallback(async () => {
-    if (!address) return;
+    if (!address || !walletClient) return;
     setShowSgip(true);
     setSgipRunning(true);
     setSgipError(undefined);
     setSgipGas(undefined);
 
+    const signer = walletClientToSigner(walletClient);
     const pipeline = SGIP.stitch([SGIP.Steps.faucet(), SGIP.Steps.mintMembership()]);
 
     pipeline.on('*', (event) => {
@@ -119,16 +121,19 @@ export default function DashboardPage() {
       mockUSDAddress: MOCK_USD_ADDRESS,
       membershipNFTAddress: MEMBERSHIP_NFT_ADDRESS,
       balance: parseFloat(displayBalance),
+      signer: signer,
     });
 
     setSgipRunning(false);
     if (ok) {
       toast({ title: '⚡ SGIP Pipeline Complete', description: `Saved ${pipeline.totalGasSavedUSD.toFixed(2)} in gas!` });
     } else {
-      setSgipError('Pipeline failed — check individual step errors.');
-      toast({ title: 'Pipeline Failed', variant: 'destructive' });
+      const lastFailedStep = pipeline.state.find(s => s.status === 'failed');
+      const errorMsg = lastFailedStep?.result?.error || 'Pipeline failed — check individual step errors.';
+      setSgipError(errorMsg);
+      toast({ title: 'Pipeline Failed', description: errorMsg, variant: 'destructive' });
     }
-  }, [address, displayBalance, addTransaction, toast]);
+  }, [address, walletClient, displayBalance, addTransaction, toast]);
 
   if (!isConnected) {
     return (

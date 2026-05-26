@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useAccount, useBalance } from 'wagmi';
+import { useAccount, useBalance, useWalletClient } from 'wagmi';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Card, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import NFTCard3D from '@/components/3d/NFTCard3D';
 import SGIPPanel from '@/components/SGIPPanel';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useTilt } from '@/hooks/useTilt';
-import { cn } from '@/lib/utils';
+import { cn, walletClientToSigner } from '@/lib/utils';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 const MEMBERSHIP_NFT_ADDRESS = (import.meta.env.VITE_MEMBERSHIP_NFT_ADDRESS || '0x0000000000000000000000000000000000000000') as `0x${string}`;
@@ -22,6 +22,7 @@ const MOCK_USD_ADDRESS = (import.meta.env.VITE_MOCK_USD_ADDRESS || '0x0000000000
 
 export default function MintPage() {
   const { address, isConnected } = useAccount();
+  const { data: walletClient } = useWalletClient();
   const { pathname } = useLocation();
   const [sgipSteps, setSgipSteps] = useState<SGIPStepState[]>([]);
   const [sgipRunning, setSgipRunning] = useState(false);
@@ -44,12 +45,13 @@ export default function MintPage() {
     : (virtualEarned - virtualSpent).toFixed(2);
 
   const runMintPipeline = useCallback(async () => {
-    if (!address) return;
+    if (!address || !walletClient) return;
     setSgipRunning(true);
     setSgipError(undefined);
     setSgipGas(undefined);
     setSgipSteps([]);
 
+    const signer = walletClientToSigner(walletClient);
     const pipeline = SGIP.stitch([SGIP.Steps.faucet(), SGIP.Steps.mintMembership()]);
 
     pipeline.on('*', (event) => {
@@ -74,6 +76,7 @@ export default function MintPage() {
       mockUSDAddress: MOCK_USD_ADDRESS,
       membershipNFTAddress: MEMBERSHIP_NFT_ADDRESS,
       balance: parseFloat(displayBalance),
+      signer: signer,
     });
 
     setSgipRunning(false);
@@ -81,16 +84,19 @@ export default function MintPage() {
       setMintSuccess(true);
       toast({ title: '🛡️ Membership Minted!', description: `Saved $${pipeline.totalGasSavedUSD.toFixed(2)} in gas via SGIP!` });
     } else {
-      setSgipError('Pipeline failed. Please try again.');
-      toast({ title: 'Mint Failed', variant: 'destructive' });
+      const lastFailedStep = pipeline.state.find(s => s.status === 'failed');
+      const errorMsg = lastFailedStep?.result?.error || 'Pipeline failed. Please try again.';
+      setSgipError(errorMsg);
+      toast({ title: 'Mint Failed', description: errorMsg, variant: 'destructive' });
     }
-  }, [address, displayBalance, addTransaction, toast]);
+  }, [address, walletClient, displayBalance, addTransaction, toast]);
 
   const runFaucetOnly = useCallback(async () => {
-    if (!address) return;
+    if (!address || !walletClient) return;
     setSgipRunning(true);
     setSgipError(undefined);
 
+    const signer = walletClientToSigner(walletClient);
     const pipeline = SGIP.stitch([SGIP.Steps.faucet()]);
     pipeline.on('*', (e) => {
       if (e.state) setSgipSteps([...e.state]);
@@ -101,6 +107,7 @@ export default function MintPage() {
       mockUSDAddress: MOCK_USD_ADDRESS,
       membershipNFTAddress: MEMBERSHIP_NFT_ADDRESS,
       balance: 0,
+      signer: signer,
     });
 
     setSgipRunning(false);
@@ -108,8 +115,12 @@ export default function MintPage() {
       setFaucetSuccess(true);
       addTransaction({ hash: `0x${Math.random().toString(16).slice(2)}`, action: 'MockUSD Faucet', timestamp: Date.now(), gasSaved: '0.0005 ETH ($1.75)', status: 'success' });
       toast({ title: '🪙 100 MUSD Received!', description: 'Gaslessly claimed via UGF.' });
+    } else {
+      const errorMsg = pipeline.state[0]?.result?.error || 'Faucet request failed.';
+      setSgipError(errorMsg);
+      toast({ title: 'Faucet Failed', description: errorMsg, variant: 'destructive' });
     }
-  }, [address, addTransaction, toast]);
+  }, [address, walletClient, addTransaction, toast]);
 
   if (!isConnected) {
     return (

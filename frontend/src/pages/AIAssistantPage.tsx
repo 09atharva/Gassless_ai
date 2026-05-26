@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useAccount, useBalance } from 'wagmi';
+import { useAccount, useBalance, useWalletClient } from 'wagmi';
 import { Link, useLocation } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Card, CardFooter, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { useTransactionHistory } from '@/hooks/use-transaction-history';
 import { SGIP, type SGIPStepState } from '@/lib/sgip';
 import { useToast } from '@/hooks/use-toast';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { cn } from '@/lib/utils';
+import { cn, walletClientToSigner } from '@/lib/utils';
 
 import AIOrb3D from '@/components/3d/AIOrb3D';
 import SGIPPanel from '@/components/SGIPPanel';
@@ -39,6 +39,7 @@ const suggestions = [
 
 export default function AIAssistantPage() {
   const { address, isConnected } = useAccount();
+  const { data: walletClient } = useWalletClient();
   const { pathname } = useLocation();
   const { history, addTransaction } = useTransactionHistory();
   const { toast } = useToast();
@@ -46,7 +47,7 @@ export default function AIAssistantPage() {
   const { data: musdBalance } = useBalance({ address: address, token: MOCK_USD_ADDRESS });
 
   const virtualEarned = history.filter(tx => tx.action.includes('Faucet')).length * 100;
-  const virtualSpent = history.filter(tx => tx.action.includes('AI Payment')).length * 1;
+  const virtualSpent = history.filter(tx => tx.action.toLowerCase().includes('ai payment')).length * 1;
   const currentBalance = (musdBalance ? parseFloat(musdBalance.formatted) : 0) + virtualEarned - virtualSpent;
 
   const [messages, setMessages] = useState<Message[]>([
@@ -64,16 +65,20 @@ export default function AIAssistantPage() {
   }, [messages]);
 
   const executeBlockchainAction = useCallback(async (action: string, msgIdx: number) => {
+    if (!address || !walletClient) return;
     setMessages(prev => prev.map((m, i) => i === msgIdx ? { ...m, actionStatus: 'pending' as const } : m));
 
     const steps = action === 'MINT_MEMBERSHIP'
       ? [SGIP.Steps.mintMembership()]
       : action === 'GET_FAUCET'
       ? [SGIP.Steps.faucet()]
+      : action === 'UPGRADE_TIER'
+      ? [SGIP.Steps.upgradeTier()]
       : [];
 
     if (!steps.length) return;
 
+    const signer = walletClientToSigner(walletClient);
     const pipeline = SGIP.stitch(steps);
     let latestSteps: SGIPStepState[] = [];
     let latestGas = '';
@@ -91,6 +96,7 @@ export default function AIAssistantPage() {
       mockUSDAddress: MOCK_USD_ADDRESS,
       membershipNFTAddress: MEMBERSHIP_NFT_ADDRESS,
       balance: currentBalance,
+      signer: signer,
     });
 
     if (ok) {
@@ -111,15 +117,17 @@ export default function AIAssistantPage() {
       ));
       toast({ title: '⚡ Action Complete', description: `Saved ${latestGas} via SGIP!` });
     } else {
+      const lastFailedStep = pipeline.state.find(s => s.status === 'failed');
+      const errorMsg = lastFailedStep?.result?.error || 'Action failed. Please try again.';
       setMessages(prev => prev.map((m, i) =>
-        i === msgIdx ? { ...m, actionStatus: 'failed' as const, content: m.content + '\n\n❌ Action failed. Please try again.' } : m
+        i === msgIdx ? { ...m, actionStatus: 'failed' as const, content: m.content + `\n\n❌ ${errorMsg}` } : m
       ));
-      toast({ title: 'Action Failed', variant: 'destructive' });
+      toast({ title: 'Action Failed', description: errorMsg, variant: 'destructive' });
     }
-  }, [address, currentBalance, addTransaction, toast]);
+  }, [address, walletClient, currentBalance, addTransaction, toast]);
 
   const handleSend = useCallback(async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !walletClient) return;
 
     const userMessage = input.trim();
     setInput('');
@@ -127,32 +135,7 @@ export default function AIAssistantPage() {
     setIsLoading(true);
 
     try {
-      // Try SGIP payment (gracefully skip if it fails — e.g. contracts not deployed)
-      if (currentBalance >= 1) {
-        try {
-          const payPipeline = SGIP.stitch([SGIP.Steps.aiPayment()]);
-          await payPipeline.execute({
-            address: address!,
-            mockUSDAddress: MOCK_USD_ADDRESS,
-            membershipNFTAddress: MEMBERSHIP_NFT_ADDRESS,
-            balance: currentBalance,
-          });
-          const payResult = payPipeline.state[0]?.result;
-          if (payResult?.hash) {
-            addTransaction({
-              hash: payResult.hash,
-              action: 'Gasless AI Payment',
-              timestamp: Date.now(),
-              gasSaved: payResult.gasSaved ?? '0 ETH ($0.35)',
-              status: 'success',
-            });
-          }
-        } catch (payErr) {
-          console.warn('SGIP payment skipped:', payErr);
-        }
-      }
-
-      // Call AI backend
+      // AI Backend call (Payment is now handled silently by the backend)
       const API_BASE = import.meta.env.VITE_API_URL || '';
       const response = await fetch(`${API_BASE}/api/ai/chat`, {
         method: 'POST',
@@ -174,6 +157,18 @@ export default function AIAssistantPage() {
       if (data.error) {
         throw new Error(data.error);
       }
+
+      // Record the backend-processed payment
+      if (data.payment && data.payment.hash) {
+        addTransaction({
+          hash: data.payment.hash,
+          action: 'Gasless AI Payment (Backend)',
+          timestamp: Date.now(),
+          gasSaved: data.payment.gasSaved || '0 ETH ($0.35)',
+          status: 'success',
+        });
+      }
+
       let aiContent: string = data.text ?? 'Sorry, I could not generate a response.';
       const actionMatch = aiContent.match(/\{"action":\s*"([^"]+)"\}/);
       const action = actionMatch ? actionMatch[1] : null;
@@ -195,7 +190,7 @@ export default function AIAssistantPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, currentBalance, address, history, messages.length, addTransaction, executeBlockchainAction, toast]);
+  }, [input, isLoading, currentBalance, address, history, messages.length, addTransaction, executeBlockchainAction, toast, walletClient]);
 
   if (!isConnected) {
     return (

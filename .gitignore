@@ -38,3 +38,10 @@ coverage.json
 .idea/
 *.swp
 *.swo
+
+# Netlify
+.netlify/
+
+# Deploy scripts (contain secrets)
+deploy_render.sh
+update_render_env.sh
